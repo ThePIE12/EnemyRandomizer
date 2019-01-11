@@ -4,56 +4,138 @@ const fs = require('fs')
 const readline = require('readline-sync')
 const path = require('path')
 const shuffleSeed = require('shuffle-seed')
+const {
+	performance
+} = require('perf_hooks')
 
 // Pauses process
 function Sleep(milliseconds) {
 	return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
-function EditAllJSON(directory, callback) {
-	fs.readdir(directory, (err, files) => {
+// Found this here: https://stackoverflow.com/a/31831122/10897513
+function directoryTreeToObj(dir, done) {
+	var results = []
+
+	fs.readdir(dir, function (err, list) {
 		if (err)
-      throw err
+			return done(err)
 
-    // Handles each folder/file
-		files.forEach((file, index) => {
-			let fullDir = path.join(directory, file)
+		var pending = list.length
 
-			fs.stat(fullDir, (err, stat) => {
-				if (err)
-					throw err
+		if (!pending)
+			return done(null, {
+				name: path.basename(dir),
+				type: 'folder',
+				children: results
+			})
 
-				if (stat.isDirectory())
-					EditAllJSON(fullDir, callback)
-
-				// Gets
-        if (stat.isFile()) {
-					let jsonData = JSON.parse(fs.readFileSync(fullDir, 'utf8'))
-					jsonData = callback(jsonData, fullDir)
-					fs.writeFile(fullDir, JSON.stringify(jsonData), 'utf8', err => {
-    				if (err)
-							throw err
-    			})
+		list.forEach(function (file) {
+			file = path.resolve(dir, file)
+			fs.stat(file, function (err, stat) {
+				if (stat && stat.isDirectory()) {
+					directoryTreeToObj(file, function (err, res) {
+						results.push({
+							name: path.basename(file),
+							type: 'folder',
+							children: res
+						})
+						if (!--pending)
+							done(null, results)
+					})
+				} else {
+					results.push({
+						type: 'file',
+						name: path.basename(file)
+					})
+					if (!--pending)
+						done(null, results)
 				}
 			})
 		})
-  })
+	})
 }
 
 // The actual thing that does stuff
 function main() {
-  // Starts randomizing the enemies
-	/*
-	var allFiles = []
-	EditAllJSON('C:/Program Files (x86)/Steam/steamapps/common/CrossCode/assets/data/enemies',
-		(data, fileName) => {
-		data.Randomizer = data.Randomizer || {}
-		data.Randomizer.origName = data.Randomizer.origName || file
-		allFiles.push(fileName)
-		return data
+	let baseDir = 'C:/Program Files (x86)/Steam/steamapps/common/CrossCode'
+	let dir = path.join(baseDir, 'assets/data/enemies')
+
+	directoryTreeToObj(dir, function (err, res) {
+		if (err)
+			console.error(err)
+
+		console.log(`\n>> Sucessfully read directory '${dir}'`)
+		main2(res)
 	})
-	*/
-	console.log(fs.readdirSync('C:/Program Files (x86)/Steam/steamapps/common/CrossCode/assets/data/enemies'))
+
+	function main2(res) {
+		function IterateTree(arr, _path) {
+			var result = []
+			arr.forEach(function(treeObj) {
+				if (treeObj.type === 'folder') {
+					IterateTree(treeObj.children, path.join(_path, treeObj.name))
+				} else {
+					result.push({
+						[treeObj.name]: JSON.parse(fs.readFileSync(path.join(_path, treeObj.name), 'utf8'))
+					})
+				}
+			})
+
+			return result
+		}
+
+		let enemyObjects = IterateTree(res, dir)
+		var keys = []
+		enemyObjects.forEach(function(item) {
+			keys.push(Object.keys(item)[0])
+			delete item[keys[keys.length-1]].Randomizer
+			item[keys[keys.length-1]].Randomizer = item[keys[keys.length-1]].Randomizer || {}
+			item[keys[keys.length-1]].Randomizer.origName = item[keys[keys.length-1]].Randomizer.origName || keys[keys.length-1]
+		})
+
+		let indexes = []
+		for (let i = 0; i < keys.length; i++) {
+			indexes.push(i)
+		}
+		let shuffledKeys = shuffleSeed.shuffle(indexes, 'This is a complex seed!')
+
+		let temp
+		for (let i = 0; i < enemyObjects.length; i++) {
+			temp = enemyObjects[i][keys[i]]
+			enemyObjects[i][keys[i]] = enemyObjects[shuffledKeys[i]][keys[shuffledKeys[i]]]
+			enemyObjects[shuffledKeys[i]][keys[shuffledKeys[i]]] = temp
+		}
+
+		function main3(tree, _path) {
+			var result3 = []
+			tree.forEach(function(treeObj) {
+				if (treeObj.type === 'folder') {
+					main3(treeObj.children, path.join(_path, treeObj.name))
+				} else {
+					for (let i = 0; i < enemyObjects.length; i++) {
+						console.log(treeObj.name)
+						console.log(keys[i])
+						console.log()
+						if (keys[i] === treeObj.name) {
+							fs.writeFile(path.join(_path, treeObj.name), JSON.stringify(enemyObjects[i][keys[i]]), 'utf8', function(err) {
+								if(err)
+									console.error(err)
+							})
+							break
+						}
+					}
+				}
+			})
+		}
+
+		keys = []
+		enemyObjects.forEach(function(item) {
+			keys.push(Object.keys(item)[0])
+		})
+
+		main3(res, dir)
+	}
 }
 
 main()
