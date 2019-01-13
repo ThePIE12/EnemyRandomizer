@@ -173,12 +173,17 @@ function main(Options) {
 		console.log('\nTook ' + (t1 - t0) + ' milliseconds.\n')
 		if (!restore)
 			console.log(`Seed: ${Options.seed}`)
+		setTimeout(function() {
+			process.exit(1)
+		}, 3000)
 	}
 }
 
 if (!fs.existsSync('input/arid')) {
 	console.log('Copy the contents of \'CrossCode/assets/data/enemies/\' into the \'input\' folder!')
-	process.exit(1)
+	setTimeout(function() {
+		process.exit(1)
+	}, 3000)
 }
 
 let Options = {}
