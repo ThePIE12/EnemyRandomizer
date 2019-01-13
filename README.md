@@ -12,4 +12,4 @@ Download a [release](https://github.com/ThePIE12/EnemyRandomizer/releases) and e
 ## Usage
 * Copy the contents of `/CrossCode/assets/data/enemies/` into `/The-Randomizer-Folder/input/`
 * Run the exe and follow the instructions
-* `/output/Randomized-enemies/` to `/CrossCode/assets/mods/`
+* Copy or move `/output/Randomized-enemies/` to `/CrossCode/assets/mods/`
