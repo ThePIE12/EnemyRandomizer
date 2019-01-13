@@ -62,15 +62,15 @@ function directoryTreeToObj(dir, done) {
 function main(Options) {
 	let t0 = performance.now()
 	let inputDir = 'input'
-	let dir = 'output/assets/data/enemies/'
+	let dir = 'output/Randomized-enemies/assets/data/enemies/'
 
 	if (!fs.existsSync(dir))
 		mkdirp(dir, function (err) {
 	  	if (err)
 				console.error(err)
 
-			if (!fs.existsSync('output/package.json'))
-				fs.writeFileSync('output/package.json', JSON.stringify({'name': 'Randomized enemies'}), 'utf8')
+			if (!fs.existsSync('output/Randomized-enemies/package.json'))
+				fs.writeFileSync('output/Randomized-enemies/package.json', JSON.stringify({'name': 'Randomized enemies'}), 'utf8')
 
 			ncp(inputDir, dir, function (err) {
 				if (err) return console.error(err)
