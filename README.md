@@ -3,7 +3,7 @@
 [Official CrossCode](https://discord.gg/crosscode)
 
 # EnemyRandomizer
-This mod randomises enemies in [CrossCode](https://www.cross-code.com/en/home)
+This mod randomises enemies in [CrossCode](https://www.cross-code.com/en/home)<br>
 [CCLoader](https://github.com/CCDirectLink/CCLoader) is needed to load the mod
 
 ## How to install?
