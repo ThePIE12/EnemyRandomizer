@@ -1,9 +1,11 @@
 'use strict'
 // Loading modules
 const fs = require('fs')
-const readline = require('readline-sync')
+const readlineSync = require('readline-sync')
+const mkdirp = require('mkdirp')
 const path = require('path')
 const shuffleSeed = require('shuffle-seed')
+const ncp = require('ncp').ncp
 const {
 	performance
 } = require('perf_hooks')
@@ -57,24 +59,43 @@ function directoryTreeToObj(dir, done) {
 }
 
 // The actual thing that does stuff
-function main() {
-	let baseDir = 'C:/Program Files (x86)/Steam/steamapps/common/CrossCode'
-	let dir = path.join(baseDir, 'assets/data/enemies')
+function main(Options) {
+	let t0 = performance.now()
+	let inputDir = 'input'
+	let dir = 'output/assets/data/enemies/'
 
-	directoryTreeToObj(dir, function (err, res) {
-		if (err)
-			console.error(err)
+	if (!fs.existsSync(dir))
+		mkdirp(dir, function (err) {
+	  	if (err)
+				console.error(err)
 
-		console.log(`\n>> Sucessfully read directory '${dir}'`)
-		main2(res)
-	})
+			if (!fs.existsSync('output/package.json'))
+				fs.writeFileSync('output/package.json', JSON.stringify({'name': 'Randomized enemies'}), 'utf8')
+
+			ncp(inputDir, dir, function (err) {
+				if (err) return console.error(err)
+				main1_5()
+			})
+		})
+	else
+		main1_5()
+
+	function main1_5() {
+		directoryTreeToObj(dir, function (err, res) {
+			if (err)
+				console.error(err)
+
+			console.log(`\n>> Sucessfully read directory '${dir}'`)
+			main2(res)
+		})
+	}
 
 	function main2(res) {
-		function IterateTree(arr, _path) {
-			var result = []
+
+		function IterateTree(arr, _path, result) {
 			arr.forEach(function(treeObj) {
 				if (treeObj.type === 'folder') {
-					IterateTree(treeObj.children, path.join(_path, treeObj.name))
+					IterateTree(treeObj.children, path.join(_path, treeObj.name), result)
 				} else {
 					result.push({
 						[treeObj.name]: JSON.parse(fs.readFileSync(path.join(_path, treeObj.name), 'utf8'))
@@ -85,20 +106,24 @@ function main() {
 			return result
 		}
 
-		let enemyObjects = IterateTree(res, dir)
+		let enemyObjects = IterateTree(res, dir, [])
 		var keys = []
 		enemyObjects.forEach(function(item) {
 			keys.push(Object.keys(item)[0])
-			delete item[keys[keys.length-1]].Randomizer
-			item[keys[keys.length-1]].Randomizer = item[keys[keys.length-1]].Randomizer || {}
-			item[keys[keys.length-1]].Randomizer.origName = item[keys[keys.length-1]].Randomizer.origName || keys[keys.length-1]
+
+			item[keys[keys.length-1]].Randomiser = item[keys[keys.length-1]].Randomiser || {}
+			item[keys[keys.length-1]].Randomiser.origName = item[keys[keys.length-1]].Randomiser.origName || keys[keys.length-1]
 		})
 
 		let indexes = []
 		for (let i = 0; i < keys.length; i++) {
 			indexes.push(i)
 		}
-		let shuffledKeys = shuffleSeed.shuffle(indexes, 'This is a complex seed!')
+
+		if (Options.seed === '') {
+			Options.seed = Math.random().toString().slice(2,11)
+		}
+		let shuffledKeys = shuffleSeed.shuffle(indexes, Options.seed)
 
 		let temp
 		for (let i = 0; i < enemyObjects.length; i++) {
@@ -107,22 +132,30 @@ function main() {
 			enemyObjects[shuffledKeys[i]][keys[shuffledKeys[i]]] = temp
 		}
 
+		let restore = Options.restore
 		function main3(tree, _path) {
-			var result3 = []
 			tree.forEach(function(treeObj) {
 				if (treeObj.type === 'folder') {
 					main3(treeObj.children, path.join(_path, treeObj.name))
 				} else {
 					for (let i = 0; i < enemyObjects.length; i++) {
-						console.log(treeObj.name)
-						console.log(keys[i])
-						console.log()
-						if (keys[i] === treeObj.name) {
+						if (keys[i] === treeObj.name && !restore) {
+							console.log('Ramdomized: ' + treeObj.name)
 							fs.writeFile(path.join(_path, treeObj.name), JSON.stringify(enemyObjects[i][keys[i]]), 'utf8', function(err) {
 								if(err)
 									console.error(err)
 							})
 							break
+						} else if (restore) {
+								if ((enemyObjects[i][keys[i]].Randomiser) && (enemyObjects[i][keys[i]].Randomiser.origName === treeObj.name)) {
+									console.log('Restored: '+ treeObj.name)
+									delete enemyObjects[i][keys[i]].Randomiser
+									fs.writeFile(path.join(_path, treeObj.name), JSON.stringify(enemyObjects[i][keys[i]]), 'utf8', function(err) {
+										if(err)
+											console.error(err)
+									})
+									break
+							}
 						}
 					}
 				}
@@ -135,7 +168,28 @@ function main() {
 		})
 
 		main3(res, dir)
+
+		let t1 = performance.now()
+		console.log('\nTook ' + (t1 - t0) + ' milliseconds.\n')
+		if (!restore)
+			console.log(`Seed: ${Options.seed}`)
 	}
 }
 
-main()
+if (!fs.existsSync('input/arid')) {
+	console.log('Copy the contents of \'CrossCode/assets/data/enemies/\' into the \'input\' folder!')
+	process.exit(1)
+}
+
+let Options = {}
+
+Options.restore = readlineSync.question(
+	'\nRestore? (Y)es or (N)o?' +
+	'\nDefault is: N\n>>  ').toLowerCase() == 'y' ? true : false
+
+if (!Options.restore)
+	Options.seed = readlineSync.question('\nSeed? Empty for a random seed.\n>>  ')
+else
+	Options.seed = ''
+
+main(Options)

@@ -1,22 +1,28 @@
 {
   "name": "enemyrandomizer",
-  "version": "0.0.0",
-  "description": "Enemy randomizer for CrossCode",
+  "version": "1.0.0",
+  "description": "Randomises enemies in CrossCode",
   "main": "main.js",
-  "scripts": {
-    "test": "npm start"
-  },
-  "keywords": [
-    "CrossCode",
-    "Randomizer",
-    "EvoHATE"
-  ],
-  "author": "_StarWing_",
-  "license": "MIT",
   "dependencies": {
+    "mkdirp": "^0.5.1",
+    "ncp": "^2.0.0",
     "path": "^0.12.7",
     "readline": "^1.3.0",
     "readline-sync": "^1.4.9",
     "shuffle-seed": "^1.1.6"
-  }
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThePIE12/EnemyRandomizer.git"
+  },
+  "author": "ThePIE12",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ThePIE12/EnemyRandomizer/issues"
+  },
+  "homepage": "https://github.com/ThePIE12/EnemyRandomizer#readme"
 }
